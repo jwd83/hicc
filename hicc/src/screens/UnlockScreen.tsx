@@ -18,6 +18,7 @@ import {
   UnlockedFile,
 } from '../services/alldebrid';
 import TVFocusable from '../components/TVFocusable';
+import libraryService from '../services/library';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Unlock'>;
 type UnlockRouteProp = RouteProp<RootStackParamList, 'Unlock'>;
@@ -25,12 +26,31 @@ type UnlockRouteProp = RouteProp<RootStackParamList, 'Unlock'>;
 export default function UnlockScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<UnlockRouteProp>();
-  const {magnet, title} = route.params;
+  const {magnet, title, infoHash, size, seeds, leeches} = route.params;
 
   const [status, setStatus] = useState<string>('Uploading magnet...');
   const [files, setFiles] = useState<UnlockedFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    libraryService.isMagnetSaved(magnet).then(setIsSaved);
+  }, [magnet]);
+
+  const handleSaveToLibrary = useCallback(async () => {
+    const result = await libraryService.addSavedMagnet({
+      title,
+      magnet,
+      infoHash,
+      size: size || '',
+      seeds: seeds || 0,
+      leeches: leeches || 0,
+    });
+    if (result.success) {
+      setIsSaved(true);
+    }
+  }, [title, magnet, infoHash, size, seeds, leeches]);
 
   const unlockMagnet = useCallback(async () => {
     try {
@@ -157,17 +177,36 @@ export default function UnlockScreen() {
         <Text style={styles.noFiles}>No video files found</Text>
       )}
 
-      <TVFocusable style={styles.backButton} onPress={() => navigation.goBack()}>
-        {(focused: boolean) => (
-          <Text
-            style={[
-              styles.backButtonText,
-              focused && styles.backButtonTextFocused,
-            ]}>
-            Back to Search
-          </Text>
+      <View style={styles.buttonRow}>
+        {!isSaved ? (
+          <TVFocusable style={styles.saveButton} onPress={handleSaveToLibrary}>
+            {(focused: boolean) => (
+              <Text
+                style={[
+                  styles.saveButtonText,
+                  focused && styles.saveButtonTextFocused,
+                ]}>
+                Save to Library
+              </Text>
+            )}
+          </TVFocusable>
+        ) : (
+          <View style={styles.savedIndicator}>
+            <Text style={styles.savedText}>In Library</Text>
+          </View>
         )}
-      </TVFocusable>
+        <TVFocusable style={styles.backButton} onPress={() => navigation.goBack()}>
+          {(focused: boolean) => (
+            <Text
+              style={[
+                styles.backButtonText,
+                focused && styles.backButtonTextFocused,
+              ]}>
+              Back
+            </Text>
+          )}
+        </TVFocusable>
+      </View>
     </View>
   );
 }
@@ -252,5 +291,37 @@ const styles = StyleSheet.create({
   },
   backButtonTextFocused: {
     color: '#fff',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#2ecc71',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonTextFocused: {
+    color: '#FFD700',
+  },
+  savedIndicator: {
+    flex: 1,
+    backgroundColor: '#2d2d44',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  savedText: {
+    color: '#2ecc71',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

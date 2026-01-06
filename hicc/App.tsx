@@ -1,48 +1,52 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {
-  StatusBar,
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  PressableStateCallbackType,
-} from 'react-native';
+import {StatusBar, View, Text, StyleSheet, Pressable} from 'react-native';
 import SearchScreen from './src/screens/SearchScreen';
 import UnlockScreen from './src/screens/UnlockScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import LibraryScreen from './src/screens/LibraryScreen';
 import {hasApiKey} from './src/services/alldebrid';
 
-type TVPressableState = PressableStateCallbackType & {focused?: boolean};
-
 export type RootStackParamList = {
-  Search: undefined;
-  Unlock: {magnet: string; title: string; infoHash: string};
+  Search: {initialQuery?: string} | undefined;
+  Unlock: {
+    magnet: string;
+    title: string;
+    infoHash: string;
+    size?: string;
+    seeds?: number;
+    leeches?: number;
+  };
   Player: {url: string; title: string};
   Settings: undefined;
+  Library: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function SettingsHeaderButton({onPress}: {onPress: () => void}) {
+function HeaderButton({
+  onPress,
+  label,
+}: {
+  onPress: () => void;
+  label: string;
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleFocus = useCallback(() => setIsFocused(true), []);
+  const handleBlur = useCallback(() => setIsFocused(false), []);
+
   return (
     <Pressable
       onPress={onPress}
-      style={(state: TVPressableState) => [
-        styles.settingsButton,
-        state.focused && styles.settingsButtonFocused,
-      ]}>
-      {(state: TVPressableState) => (
-        <Text
-          style={[
-            styles.settingsText,
-            state.focused && styles.settingsTextFocused,
-          ]}>
-          Settings
-        </Text>
-      )}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      style={[styles.headerButton, isFocused && styles.headerButtonFocused]}>
+      <Text style={[styles.headerText, isFocused && styles.headerTextFocused]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -81,9 +85,16 @@ export default function App() {
             options={({navigation}) => ({
               title: 'HICC',
               headerRight: () => (
-                <SettingsHeaderButton
-                  onPress={() => navigation.navigate('Settings')}
-                />
+                <View style={styles.headerButtons}>
+                  <HeaderButton
+                    onPress={() => navigation.navigate('Library')}
+                    label="Library"
+                  />
+                  <HeaderButton
+                    onPress={() => navigation.navigate('Settings')}
+                    label="Settings"
+                  />
+                </View>
               ),
             })}
           />
@@ -105,6 +116,11 @@ export default function App() {
             component={SettingsScreen}
             options={{title: 'Settings'}}
           />
+          <Stack.Screen
+            name="Library"
+            component={LibraryScreen}
+            options={{title: 'My Library'}}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </>
@@ -122,23 +138,29 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
   },
-  settingsButton: {
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 3,
     borderColor: 'transparent',
+    backgroundColor: '#2d2d44',
   },
-  settingsButtonFocused: {
-    borderColor: '#6c5ce7',
-    backgroundColor: 'rgba(108, 92, 231, 0.3)',
-    transform: [{scale: 1.05}],
+  headerButtonFocused: {
+    borderColor: '#FFD700',
+    backgroundColor: '#6c5ce7',
   },
-  settingsText: {
+  headerText: {
     fontSize: 16,
     color: '#a0a0a0',
+    fontWeight: '500',
   },
-  settingsTextFocused: {
-    color: '#fff',
+  headerTextFocused: {
+    color: '#FFD700',
+    fontWeight: '700',
   },
 });
